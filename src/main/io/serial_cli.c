@@ -527,7 +527,7 @@ static const char* const sectionBreak = "\r\n";
 static void cliDump(char *cmdline)
 {
     unsigned int i;
-    char buf[16];
+    char buf[17];
     float thr, roll, pitch, yaw;
     uint32_t mask;
 
@@ -587,9 +587,14 @@ static void cliDump(char *cmdline)
 
         printf("\r\n\r\n# map\r\n");
 
-        for (i = 0; i < 8; i++)
-            buf[masterConfig.rxConfig.rcmap[i]] = rcChannelLetters[i];
+        for (i = 0; i < rxRuntimeConfig.channelCount; i++)
+            buf[i] = '-';
         buf[i] = '\0';
+
+        for (i = 0; i < 12; i++)
+            if (masterConfig.rxConfig.rcmap[i] != -1)
+                buf[masterConfig.rxConfig.rcmap[i]] = rcChannelLetters[i];
+
         printf("map %s\r\n", buf);
 
         printSectionBreak();
@@ -741,26 +746,34 @@ static void cliMap(char *cmdline)
 {
     uint32_t len;
     uint32_t i;
-    char out[9];
+    char out[rxRuntimeConfig.channelCount + 1];
 
     len = strlen(cmdline);
 
-    if (len == 8) {
+    if (len == rxRuntimeConfig.channelCount) {
         // uppercase it
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < len; i++)
             cmdline[i] = toupper((unsigned char)cmdline[i]);
-        for (i = 0; i < 8; i++) {
+
+        //TODO: rewrite input sequence check	    
+        /*for (i = 0; i < 8; i++) {
             if (strchr(rcChannelLetters, cmdline[i]) && !strchr(cmdline + i + 1, cmdline[i]))
                 continue;
             cliPrint("Must be any order of AETR1234\r\n");
             return;
-        }
+        }*/
+
         parseRcChannels(cmdline, &masterConfig.rxConfig);
     }
     cliPrint("Current assignment: ");
-    for (i = 0; i < 8; i++)
-        out[masterConfig.rxConfig.rcmap[i]] = rcChannelLetters[i];
+    for (i = 0; i < rxRuntimeConfig.channelCount; i++)
+        out[i] = '-';
     out[i] = '\0';
+    
+    for (i = 0; i < 12; i++)
+        if (masterConfig.rxConfig.rcmap[i] != -1)
+            out[masterConfig.rxConfig.rcmap[i]] = rcChannelLetters[i];
+
     printf("%s\r\n", out);
 }
 

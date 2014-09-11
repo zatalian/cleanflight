@@ -54,7 +54,7 @@ bool sumdInit(rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig, rcReadRa
 
 bool rxMspInit(rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback);
 
-const char rcChannelLetters[] = "AERT1234";
+const char rcChannelLetters[] = "AERT12345678";
 
 uint16_t rssi;                  // range: [0;1023]
 
@@ -167,7 +167,7 @@ bool isSerialRxFrameComplete(rxConfig_t *rxConfig)
 }
 #endif
 
-uint8_t calculateChannelRemapping(uint8_t *channelMap, uint8_t channelMapEntryCount, uint8_t channelToRemap)
+int8_t calculateChannelRemapping(int8_t *channelMap, uint8_t channelMapEntryCount, uint8_t channelToRemap)
 {
     if (channelToRemap < channelMapEntryCount) {
         return channelMap[channelToRemap];
@@ -258,8 +258,12 @@ void processRxChannels(void)
             continue;
         }
 
-        uint8_t rawChannel = calculateChannelRemapping(rxConfig->rcmap, REMAPPABLE_CHANNEL_COUNT, chan);
-
+        int8_t rawChannel = calculateChannelRemapping(rxConfig->rcmap, REMAPPABLE_CHANNEL_COUNT, chan);
+        if (rawChannel == -1) {
+            rcData[chan] = rxConfig->midrc;
+            continue;
+        }
+	
         // sample the channel
         uint16_t sample = rcReadRawFunc(&rxRuntimeConfig, rawChannel);
 
@@ -317,6 +321,10 @@ void calculateRxChannelsAndUpdateFailsafe(uint32_t currentTime)
 void parseRcChannels(const char *input, rxConfig_t *rxConfig)
 {
     const char *c, *s;
+    int i;
+
+    for (i = 0; i < 12; i++)
+        rxConfig->rcmap[i] = -1;
 
     for (c = input; *c; c++) {
         s = strchr(rcChannelLetters, *c);
